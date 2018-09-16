@@ -55,6 +55,7 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
 
+import java.nio.channels.Pipe;
 import java.util.ArrayList;
 import java.util.concurrent.BlockingQueue;
 
@@ -74,13 +75,12 @@ import java.util.concurrent.BlockingQueue;
  */
 
 @TeleOp(name="Basic: Iterative OpMode", group="Iterative Opmode")
-@Disabled
+//@Disabled
 public class BasicOpMode_Iterative_Camera_Test extends OpMode
 {
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
-    private DcMotor leftDrive = null;
-    private DcMotor rightDrive = null;
+
 
     //private FullGoldPipe
     VuforiaLocalizer vuforia;
@@ -102,19 +102,9 @@ public class BasicOpMode_Iterative_Camera_Test extends OpMode
     public void init() {
         telemetry.addData("Status", "Initialized");
 
-        // Initialize the hardware variables. Note that the strings used here as parameters
-        // to 'get' must correspond to the names assigned during the robot configuration
-        // step (using the FTC Robot Controller app on the phone).
-        leftDrive  = hardwareMap.get(DcMotor.class, "left_drive");
-        rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
 
-        // Most robots need the motor on one side to be reversed to drive forward
-        // Reverse the motor that runs backwards when connected directly to the battery
-        leftDrive.setDirection(DcMotor.Direction.FORWARD);
-        rightDrive.setDirection(DcMotor.Direction.REVERSE);
 
-        // Tell the driver that initialization is complete.
-        telemetry.addData("Status", "Initialized");
+
         webcamName = hardwareMap.get(WebcamName.class, "Webcam 1");
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
         VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters(cameraMonitorViewId);
@@ -142,7 +132,8 @@ public class BasicOpMode_Iterative_Camera_Test extends OpMode
         vuforia.setFrameQueueCapacity(1);
 
 
-
+        // Tell the driver that initialization is complete.
+        telemetry.addData("Status", "Initialized");
 
     }
 
@@ -166,9 +157,7 @@ public class BasicOpMode_Iterative_Camera_Test extends OpMode
      */
     @Override
     public void loop() {
-        // Setup a variable for each drive wheel to save power level for telemetry
-        double leftPower;
-        double rightPower;
+
 
 
         BlockingQueue<VuforiaLocalizer.CloseableFrame> imageQueue = vuforia.getFrameQueue();
@@ -177,11 +166,15 @@ public class BasicOpMode_Iterative_Camera_Test extends OpMode
 
             goldPipe.process(image);
 
-            goldContours = goldPipe.getFinalContours();
+
 
             silverPipe.process(image);
 
-            silverContours = silverPipe.filterContoursOutput();
+            String silverContoursString = new String(silverPipe.filterContoursOutput().toString());
+            String goldContoursString = new String(goldPipe.getFinalContours().toString());
+
+            telemetry.addData("Silver Length:", silverContoursString);
+            telemetry.addData("Gold Length", goldContoursString);
 
 
 
@@ -205,23 +198,8 @@ public class BasicOpMode_Iterative_Camera_Test extends OpMode
         }));
         */
 
-        double drive = -gamepad1.left_stick_y;
-        double turn  =  gamepad1.right_stick_x;
-        leftPower    = Range.clip(drive + turn, -1.0, 1.0) ;
-        rightPower   = Range.clip(drive - turn, -1.0, 1.0) ;
 
-        // Tank Mode uses one stick to control each wheel.
-        // - This requires no math, but it is hard to drive forward slowly and keep straight.
-        // leftPower  = -gamepad1.left_stick_y ;
-        // rightPower = -gamepad1.right_stick_y ;
 
-        // Send calculated power to wheels
-        leftDrive.setPower(leftPower);
-        rightDrive.setPower(rightPower);
-
-        // Show the elapsed game time and wheel power.
-        telemetry.addData("Status", "Run Time: " + runtime.toString());
-        telemetry.addData("Motors", "left (%.2f), right (%.2f)", leftPower, rightPower);
     }
 
     /*
