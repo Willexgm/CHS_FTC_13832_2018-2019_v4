@@ -29,12 +29,34 @@
 
 package org.firstinspires.ftc.teamcode;
 
+import android.content.Context;
+import android.content.pm.PackageManager;
+//import android.graphics.Camera;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.hardware.Camera;
+
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.util.ThreadPool;
+import com.vuforia.Frame;
+
+import org.firstinspires.ftc.robotcore.external.ClassFactory;
+import org.firstinspires.ftc.robotcore.external.Consumer;
+import org.firstinspires.ftc.robotcore.external.function.Continuation;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
+import org.opencv.android.Utils;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint;
+
+import java.util.ArrayList;
+import java.util.concurrent.BlockingQueue;
 
 
 /**
@@ -60,6 +82,19 @@ public class BasicOpMode_Iterative_Camera_Test extends OpMode
     private DcMotor leftDrive = null;
     private DcMotor rightDrive = null;
 
+    //private FullGoldPipe
+    VuforiaLocalizer vuforia;
+    private FullGoldPipe goldPipe = new FullGoldPipe(640, 480, vuforia);
+    private FullSilverPipe silverPipe = new FullSilverPipe(640, 480, vuforia);
+
+    private ArrayList<MatOfPoint> goldContours;
+    private ArrayList<MatOfPoint> silverContours;
+
+    /**
+     * This is the webcam we are to use. As with other hardware devices such as motors and
+     * servos, this device is identified using the robot configuration tool in the FTC application.
+     */
+    WebcamName webcamName;
     /*
      * Code to run ONCE when the driver hits INIT
      */
@@ -80,6 +115,35 @@ public class BasicOpMode_Iterative_Camera_Test extends OpMode
 
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
+        webcamName = hardwareMap.get(WebcamName.class, "Webcam 1");
+        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
+        VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters(cameraMonitorViewId);
+
+        parameters.vuforiaLicenseKey = "AYVsAlX/////AAABmWbkdZ4I80lPnylHGLs3cnlCLb1qe8c1ZLUAyTfbRS" +
+                "OEMWD92vp4FGQ5SUHIZX+8ae9AhFL1OBIQfkhzcC4YSbs+6vMXwbEHwv+8BgquAUVkVmOXNEKibv/qvuk" +
+                "tOkNu88hX1FVe9Lprh/XHNRBjvAKTC2Hu+x/dcZrrkT2erpxXgkOY5dDgUhkbGoCvhXqL7tNKku65hmiz" +
+                "u0NZ2NbqnTCfw4Iev3dUeagzTk2mvq9SoFQZRo1FnOoZ/tiy1TMimz8V+06F6QKV9rknfqteQ//FaRqKT/" +
+                "t6V/FE6vUOI11mZGo79rIl7XCCmeUwqMrik38gqHyMFzO3lzXLeiC75FgFGmlPmT6FHjSp5rmWGTNM";
+
+        /**
+         * We also indicate which camera on the RC we wish to use.
+         */
+        parameters.cameraName = webcamName;
+
+        vuforia = ClassFactory.getInstance().createVuforia(parameters);
+
+        /**
+         * Because this opmode processes frames in order to write them to a file, we tell Vuforia
+         * that we want to ensure that certain frame formats are available in the {@link Frame}s we
+         * see.
+         */
+        vuforia.enableConvertFrameToBitmap();
+
+        vuforia.setFrameQueueCapacity(1);
+
+
+
+
     }
 
     /*
@@ -106,11 +170,41 @@ public class BasicOpMode_Iterative_Camera_Test extends OpMode
         double leftPower;
         double rightPower;
 
+
+        BlockingQueue<VuforiaLocalizer.CloseableFrame> imageQueue = vuforia.getFrameQueue();
+        try {
+            Frame image = imageQueue.remove();
+
+            goldPipe.process(image);
+
+            goldContours = goldPipe.getFinalContours();
+
+            silverPipe.process(image);
+
+            silverContours = silverPipe.filterContoursOutput();
+
+
+
+        }catch (Exception e) {
+            telemetry.addData("Processing", "No Image Found");
+        }
+
         // Choose to drive using either Tank Mode, or POV Mode
         // Comment out the method that's not used.  The default below is POV.
 
         // POV Mode uses left stick to go forward, and right stick to turn.
         // - This uses basic math to combine motions and is easier to drive straight.
+        /*
+        vuforia.getFrameOnce(Continuation.create(ThreadPool.getDefault(), new Consumer<Frame>()
+        {
+            @Override public void accept(Frame image)
+            {
+                FullGoldPipe.process(image);
+
+            }
+        }));
+        */
+
         double drive = -gamepad1.left_stick_y;
         double turn  =  gamepad1.right_stick_x;
         leftPower    = Range.clip(drive + turn, -1.0, 1.0) ;
@@ -136,5 +230,7 @@ public class BasicOpMode_Iterative_Camera_Test extends OpMode
     @Override
     public void stop() {
     }
+
+
 
 }
