@@ -4,6 +4,7 @@ import android.graphics.Bitmap;
 
 import com.vuforia.Frame;
 
+import org.corningrobotics.enderbots.endercv.OpenCVPipeline;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
 import org.opencv.android.Utils;
 import org.opencv.core.CvType;
@@ -14,7 +15,7 @@ import org.opencv.imgproc.Imgproc;
 import org.opencv.imgcodecs.Imgcodecs;
 import java.util.ArrayList;
 
-public class FullGoldPipe {
+public class FullGoldPipe{
 
     private GoldFirstPipe goldPipe1;
     private GoldSecondPipe goldPipe2 = new GoldSecondPipe();
