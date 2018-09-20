@@ -74,7 +74,7 @@ import java.util.concurrent.BlockingQueue;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="Basic: Iterative OpMode", group="Iterative Opmode")
+@TeleOp(name="BasicOpMode_Iterative_Camera_Test", group="Iterative Opmode")
 //@Disabled
 public class BasicOpMode_Iterative_Camera_Test extends OpMode
 {

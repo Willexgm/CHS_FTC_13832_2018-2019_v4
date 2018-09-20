@@ -29,6 +29,8 @@
 
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cGyro;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -38,8 +40,12 @@ import com.qualcomm.robotcore.hardware.IntegratingGyroscope;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
+import org.firstinspires.ftc.robotcore.external.navigation.Acceleration;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AngularVelocity;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 
 
 /**
@@ -56,19 +62,25 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngularVelocity;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="Basic: Iterative OpMode", group="Iterative Opmode")
-@Disabled
+@TeleOp(name="Gyro: Iterative OpMode", group="Iterative Opmode")
+//@Disabled
 public class Iterative_Gyro_Opmode_Test extends OpMode
 {
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotor leftDrive = null;
     private DcMotor rightDrive = null;
-    private IntegratingGyroscope gyro;
-    private ModernRoboticsI2cGyro modernRoboticsI2cGyro;
 
-    boolean lastResetState = false;
-    boolean curResetState  = false;
+    BNO055IMU imu;
+    Orientation angles;
+    Acceleration gravity;
+    AngularVelocity omegas;
+    double leftPower;
+    double rightPower;
+
+    double game_pad_left;
+
+    double game_pad_right;
 
     /*
      * Code to run ONCE when the driver hits INIT
@@ -94,28 +106,18 @@ public class Iterative_Gyro_Opmode_Test extends OpMode
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
 
-        // Get a reference to a Modern Robotics gyro object. We use several interfaces
-        // on this object to illustrate which interfaces support which functionality.
-        modernRoboticsI2cGyro = hardwareMap.get(ModernRoboticsI2cGyro.class, "gyro");
-        gyro = (IntegratingGyroscope)modernRoboticsI2cGyro;
-        // If you're only interested int the IntegratingGyroscope interface, the following will suffice.
-        // gyro = hardwareMap.get(IntegratingGyroscope.class, "gyro");
-        // A similar approach will work for the Gyroscope interface, if that's all you need.
+        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
+        parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
+        parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
+        parameters.calibrationDataFile = "AdafruitIMUCalibration.json"; // get calibration file
+        parameters.loggingEnabled = true;
+        parameters.loggingTag = "IMU";
+        parameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
 
-        // Start calibrating the gyro. This takes a few seconds and is worth performing
-        // during the initialization phase at the start of each opMode.
-        telemetry.log().add("Gyro Calibrating. Do Not Move!");
-        modernRoboticsI2cGyro.calibrate();
+// retrieve gyro
+        imu = hardwareMap.get(BNO055IMU.class, "imu");
+        imu.initialize(parameters);
 
-        timer.reset();
-
-        while (modernRoboticsI2cGyro.isCalibrating())  {
-            telemetry.addData("calibrating", "%s", Math.round(timer.seconds())%2==0 ? "|.." : "..|");
-            telemetry.update();
-
-        }
-
-        telemetry.log().clear(); telemetry.log().add("Gyro Calibrated. Press Start.");
         telemetry.clear(); telemetry.update();
 
         // Wait for the start button to be presse
@@ -147,33 +149,29 @@ public class Iterative_Gyro_Opmode_Test extends OpMode
     @Override
     public void loop() {
         //<editor-fold desc="Description: get gyro x rotation rate">
-        curResetState = (gamepad1.a && gamepad1.b);
-        if (curResetState && !lastResetState) {
-            modernRoboticsI2cGyro.resetZAxisIntegrator();
-        }
-        lastResetState = curResetState;
+        // read gyro values
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        gravity = imu.getGravity();
+        omegas = imu.getAngularVelocity();
+        omegas.toAngleUnit(AngleUnit.DEGREES);
 
-
-        AngularVelocity rates = gyro.getAngularVelocity(AngleUnit.DEGREES);
-
-        double actual_turning_rate = rates.xRotationRate;
+        double actual_turning_rate = omegas.xRotationRate;
 
         telemetry.addLine().addData("dx", formatRate(((float) actual_turning_rate)));
         //</editor-fold>
 
         //<editor-fold desc="Description: set up left power and right power variables and get stick positions">
-        double leftPower;
-        double rightPower;
 
-        double game_pad_left = gamepad1.left_stick_y;
-        double game_pad_right = gamepad1.right_stick_y;
+
+        game_pad_left = -gamepad1.left_stick_y;
+        game_pad_right = -gamepad1.right_stick_y;
         //</editor-fold>
 
         final double difference_threshold_stick_movement = .05;
 
         //<editor-fold desc="Description: If stick positions are very close, make them the same">
         double difference = game_pad_left - game_pad_right;
-
+        /*
         if (difference < difference_threshold_stick_movement) {
             game_pad_left = game_pad_right;
         }
@@ -191,10 +189,31 @@ public class Iterative_Gyro_Opmode_Test extends OpMode
             game_pad_right = 0;
         }
         //</editor-fold>
-
-
+        */
         final double constant = 5;
         final double gain = 5;
+
+
+        difference = game_pad_left - game_pad_right;
+
+        double turning_rate_goal = difference*constant;
+
+        double average = (game_pad_left+game_pad_right)/2;
+
+        double heading_error = turning_rate_goal-actual_turning_rate;
+
+
+
+        double adjusted_error = gain*heading_error;
+        telemetry.addData("Left Stick Y:", game_pad_left);
+        telemetry.addData("Right Stick X", game_pad_right);
+
+        telemetry.addData("Difference in Stick:", difference);
+        telemetry.addData("turning rate goal", turning_rate_goal);
+        telemetry.addData("Average: ", average);
+        telemetry.addData("Heading Error: ", heading_error);
+
+
         /*
         Description: Adjust turning rate goal based on trial and error
         Adjust difference in stick positions to change in degrees
@@ -208,15 +227,7 @@ public class Iterative_Gyro_Opmode_Test extends OpMode
         */
         //<editor-fold desc = "Description: finds error">
 
-        double turning_rate_goal = difference*constant;
 
-        double average = (game_pad_left+game_pad_right)/2;
-
-        double heading_error = turning_rate_goal-actual_turning_rate;
-
-
-
-        double adjusted_error = gain*heading_error;
 
         //</editor-fold>
 
@@ -251,7 +262,7 @@ public class Iterative_Gyro_Opmode_Test extends OpMode
         rightDrive.setPower(rightPower);
 
         // Show the elapsed game time and wheel power.
-        telemetry.addData("Status", "Run Time: " + runtime.toString());
+        //telemetry.addData("Status", "Run Time: " + runtime.toString());
         telemetry.addData("Distance From Goal", "difference: " + (actual_turning_rate - turning_rate_goal));
         telemetry.addData("Motors", "left (%.2f), right (%.2f)", leftPower, rightPower);
     }

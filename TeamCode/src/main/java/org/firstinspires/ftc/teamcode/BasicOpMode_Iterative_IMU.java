@@ -29,12 +29,23 @@
 
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
+
+import org.firstinspires.ftc.robotcore.external.navigation.Acceleration;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AngularVelocity;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
+
+import java.util.Locale;
 
 /**
  * This file contains an example of an iterative (Non-Linear) "OpMode".
@@ -50,90 +61,92 @@ import com.qualcomm.robotcore.util.Range;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="Basic: Iterative OpMode", group="Iterative Opmode")
+@TeleOp(name="BasicOpMode_Iterative_IMU", group="Iterative Opmode")
 //@Disabled
-public class DriveCode_OpMode_Iterative extends OpMode
+public class BasicOpMode_Iterative_IMU extends OpMode
 {
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotor leftDrive = null;
     private DcMotor rightDrive = null;
 
-    private int driveMode = 1; // 1 is POV, 2 is Tank
+    BNO055IMU imu;
+    Orientation angles;
+    Acceleration gravity;
+    AngularVelocity omegas;
 
+    /*
+     * Code to run ONCE when the driver hits INIT
+     */
     @Override
     public void init() {
-        telemetry.addData("Status", "Initialized");
+        // rev gyro initialization
+        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
+        parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
+        parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
+        parameters.calibrationDataFile = "AdafruitIMUCalibration.json"; // get calibration file
+        parameters.loggingEnabled = true;
+        parameters.loggingTag = "IMU";
+        parameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
 
-        // Initialize the hardware variables. Note that the strings used here as parameters
-        // to 'get' must correspond to the names assigned during the robot configuration
-        // step (using the FTC Robot Controller app on the phone).
-        leftDrive  = hardwareMap.get(DcMotor.class, "left_drive");
-        rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
-
-        // Most robots need the motor on one side to be reversed to drive forward
-        // Reverse the motor that runs backwards when connected directly to the battery
-        leftDrive.setDirection(DcMotor.Direction.FORWARD);
-        rightDrive.setDirection(DcMotor.Direction.REVERSE);
-
-        // Tell the driver that initialization is complete.
-        telemetry.addData("Status", "Initialized");
+// retrieve gyro
+        imu = hardwareMap.get(BNO055IMU.class, "imu");
+        imu.initialize(parameters);
     }
 
+    /*
+     * Code to run REPEATEDLY after the driver hits INIT, but before they hit PLAY
+     */
     @Override
     public void init_loop() {
     }
 
+    /*
+     * Code to run ONCE when the driver hits PLAY
+     */
     @Override
     public void start() {
         runtime.reset();
     }
 
+    /*
+     * Code to run REPEATEDLY after the driver hits PLAY but before they hit STOP
+     */
     @Override
     public void loop() {
-        // Setup a variable for each drive wheel to save power level for telemetry
-        double leftPower;
-        double rightPower;
+        // read gyro values
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        gravity = imu.getGravity();
+        omegas = imu.getAngularVelocity();
+        omegas.toAngleUnit(AngleUnit.DEGREES);
 
-        // Choose to drive using either Tank Mode, or POV Mode
-        if(gamepad1.a){
-            driveMode = 1;
-        }
-        if(gamepad1.b) {
-            driveMode = 2;
-        }
 
-        // POV Mode uses left stick to go forward, and right stick to turn.
-        // - This uses basic math to combine motions and is easier to drive straight.
-        if(driveMode == 1) {
-            double drive = -gamepad1.left_stick_y;
-            double turn  =  gamepad1.right_stick_x;
+// Some lines of their ordered telemetry data sent to the DS screen
+        //telemetry.addData("M", "heading: " + String.format("%.1f", heading));
+        telemetry.addData("N", "pitch: " + formatAngle(angles.angleUnit, angles.secondAngle));
+        telemetry.addData("O", "roll: " + formatAngle(angles.angleUnit, angles.thirdAngle));
+        telemetry.addData("P", "gravity: " + gravity.toString());
+        telemetry.addData("Q", "mag: " + String.format(Locale.getDefault(), "%.3f",
+                Math.sqrt(gravity.xAccel * gravity.xAccel
+                        + gravity.yAccel * gravity.yAccel
+                        + gravity.zAccel * gravity.zAccel)));
+        telemetry.addData("R", "angular v x: " + String.format("%f", omegas.xRotationRate));
+// omegas.yRotationRate and omegas.zRotationRate are the others if you want them
 
-            leftPower = Range.clip(drive + turn, -1.0, 1.0);
-            rightPower = Range.clip(drive - turn, -1.0, 1.0);
-        }else{
-            leftPower  = -gamepad1.left_stick_y ;
-            rightPower = -gamepad1.right_stick_y ;
-        }
-
-        // Tank Mode uses one stick to control each wheel.
-        // - This requires no math, but it is hard to drive forward slowly and keep straight.
-        if(driveMode == 2) {
-            leftPower  = -gamepad1.left_stick_y ;
-            rightPower = -gamepad1.right_stick_y ;
-        }
-
-        // Send calculated power to wheels
-        leftDrive.setPower(leftPower);
-        rightDrive.setPower(rightPower);
-
-        // Show the elapsed game time and wheel power.
-        telemetry.addData("Status", "Run Time: " + runtime.toString());
-        telemetry.addData("Motors", "left (%.2f), right (%.2f)", leftPower, rightPower);
     }
 
+    /*
+     * Code to run ONCE after the driver hits STOP
+     */
     @Override
     public void stop() {
     }
+    String formatAngle(AngleUnit angleUnit, double angle) {
+        return formatDegrees(AngleUnit.DEGREES.fromUnit(angleUnit, angle));
+    }
+    String formatDegrees(double degrees){
+        return String.format(Locale.getDefault(), "%.1f", AngleUnit.DEGREES.normalize(degrees));
+    }
+
 
 }
