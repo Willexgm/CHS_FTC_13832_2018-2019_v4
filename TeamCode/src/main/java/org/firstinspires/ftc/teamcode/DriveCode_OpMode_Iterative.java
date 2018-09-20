@@ -42,16 +42,9 @@ import com.qualcomm.robotcore.util.Range;
  * The names of OpModes appear on the menu of the FTC Driver Station.
  * When an selection is made from the menu, the corresponding OpMode
  * class is instantiated on the Robot Controller and executed.
- *
- * This particular OpMode just executes a basic Tank Drive Teleop for a two wheeled robot
- * It includes all the skeletal structure that all iterative OpModes contain.
- *
- * Use Android Studios to Copy this Class, and Paste it into your team's code folder with a new name.
- * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
 @TeleOp(name="Basic: Iterative OpMode", group="Iterative Opmode")
-//@Disabled
 public class DriveCode_OpMode_Iterative extends OpMode
 {
     // Declare OpMode members.
@@ -60,6 +53,7 @@ public class DriveCode_OpMode_Iterative extends OpMode
     private DcMotor rightDrive = null;
 
     private int driveMode = 1; // 1 is POV, 2 is Tank
+    private double maxSpeed = 1;// Increases and decreases the speed
 
     @Override
     public void init() {
@@ -98,9 +92,19 @@ public class DriveCode_OpMode_Iterative extends OpMode
         // Choose to drive using either Tank Mode, or POV Mode
         if(gamepad1.a){
             driveMode = 1;
+            telemetry.addData("Drive Mode", "POV");
         }
         if(gamepad1.b) {
             driveMode = 2;
+            telemetry.addData("Drive Mode", "Tank");
+        }
+
+        //Change the maxSpeed to speed up or slow down the motors
+        if(gamepad1.dpad_down){
+            maxSpeed = Range.clip(maxSpeed - 0.01, 0, 1);
+        }
+        if(gamepad1.dpad_up){
+            maxSpeed = Range.clip(maxSpeed + 0.01, 0, 1);
         }
 
         // POV Mode uses left stick to go forward, and right stick to turn.
@@ -109,18 +113,18 @@ public class DriveCode_OpMode_Iterative extends OpMode
             double drive = -gamepad1.left_stick_y;
             double turn  =  gamepad1.right_stick_x;
 
-            leftPower = Range.clip(drive + turn, -1.0, 1.0);
-            rightPower = Range.clip(drive - turn, -1.0, 1.0);
-        }else{
-            leftPower  = -gamepad1.left_stick_y ;
-            rightPower = -gamepad1.right_stick_y ;
+            leftPower = (Range.clip(drive + turn, -1.0, 1.0)) * maxSpeed;
+            rightPower = (Range.clip(drive - turn, -1.0, 1.0)) * maxSpeed;
+        }else{ //ensures that there is always a value for left and right power
+            leftPower  = (-gamepad1.left_stick_y) * maxSpeed ;
+            rightPower = (-gamepad1.right_stick_y) * maxSpeed ;
         }
 
         // Tank Mode uses one stick to control each wheel.
         // - This requires no math, but it is hard to drive forward slowly and keep straight.
         if(driveMode == 2) {
-            leftPower  = -gamepad1.left_stick_y ;
-            rightPower = -gamepad1.right_stick_y ;
+            leftPower  = (-gamepad1.left_stick_y) * maxSpeed;
+            rightPower = (-gamepad1.right_stick_y) * maxSpeed;
         }
 
         // Send calculated power to wheels
