@@ -1,0 +1,9 @@
+ if(!frameQueue.isEmpty()){
+                try {
+                    processFrame(frameQueue.take());
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }else{
+                Log.w("DogeCV", "Frame is empty wtf: " + getFrameQueueCapacity());
+            }

@@ -35,6 +35,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.hardware.Camera;
+import android.util.Log;
 
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -159,28 +160,33 @@ public class BasicOpMode_Iterative_Camera_Test extends OpMode
     public void loop() {
 
 
-
         BlockingQueue<VuforiaLocalizer.CloseableFrame> imageQueue = vuforia.getFrameQueue();
-        try {
-            Frame image = imageQueue.remove();
+        if (!imageQueue.isEmpty()) {
+            try {
+                Frame image = imageQueue.take();
 
-            goldPipe.process(image);
-
-
-
-            silverPipe.process(image);
-
-            String silverContoursString = new String(silverPipe.filterContoursOutput().toString());
-            String goldContoursString = new String(goldPipe.getFinalContours().toString());
-
-            telemetry.addData("Silver Length:", silverContoursString);
-            telemetry.addData("Gold Length", goldContoursString);
+                goldPipe.process(image);
 
 
+                silverPipe.process(image);
 
-        }catch (Exception e) {
-            telemetry.addData("Processing", "No Image Found");
+                String silverContoursString = silverPipe.filterContoursOutput().toString();
+                String goldContoursString = goldPipe.getFinalContours().toString();
+
+                telemetry.addData("Silver Length:", silverContoursString);
+                telemetry.addData("Gold Length", goldContoursString);
+
+
+            }
+            catch(Exception e){
+                telemetry.addData("CV", "Error");
+                Log.w("CV", "Error in Getting Frame: " + vuforia.getFrameQueueCapacity());
         }
+        }
+        else {
+            Log.w("CV", "Frame is empty: " + vuforia.getFrameQueueCapacity());
+        }
+
 
         // Choose to drive using either Tank Mode, or POV Mode
         // Comment out the method that's not used.  The default below is POV.
