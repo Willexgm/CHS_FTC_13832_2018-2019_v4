@@ -1,4 +1,4 @@
-##Import This Thing!
+## Import This Thing!
 First check the gitb settings.gradle file. If compile: endercv and compile: openCVLibrary3 lines exist delete them. Next pull the code. Then follow the instructions found here: https://github.com/guineawheek/endercv Once you're done update the gradle files with error to SDK Version 23 and implementation not compile
 Done!!!
 
