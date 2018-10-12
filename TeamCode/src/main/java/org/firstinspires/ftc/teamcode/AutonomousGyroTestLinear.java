@@ -61,9 +61,9 @@ import java.util.Locale;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="_FAKE_BasicOpMode_Iterative_IMU", group="Iterative Opmode")
+@TeleOp(name="FAKE_BasicOpMode_Iterative_IMU_FAKE", group="Iterative Opmode")
 //@Disabled
-public class BasicOpMode_Iterative_IMU extends OpMode
+public class AutonomousGyroTestLinear extends OpMode
 {
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();

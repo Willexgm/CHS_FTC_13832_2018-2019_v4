@@ -55,6 +55,13 @@ public class DriveCode_OpMode_Iterative extends OpMode
     private int driveMode = 1; // 1 is POV, 2 is Tank
     private double maxSpeed = 1;// Increases and decreases the speed
 
+    private boolean isDownD = false;
+    private boolean isPressedD = false;
+    private boolean isDownU = false;
+    private boolean isPressedU = false;
+
+    double acceleration = 0;
+
     @Override
     public void init() {
         telemetry.addData("Status", "Initialized");
@@ -67,8 +74,8 @@ public class DriveCode_OpMode_Iterative extends OpMode
 
         // Most robots need the motor on one side to be reversed to drive forward
         // Reverse the motor that runs backwards when connected directly to the battery
-        leftDrive.setDirection(DcMotor.Direction.FORWARD);
-        rightDrive.setDirection(DcMotor.Direction.REVERSE);
+        leftDrive.setDirection(DcMotor.Direction.REVERSE);
+        rightDrive.setDirection(DcMotor.Direction.FORWARD);
 
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
@@ -101,10 +108,36 @@ public class DriveCode_OpMode_Iterative extends OpMode
 
         //Change the maxSpeed to speed up or slow down the motors
         if(gamepad1.dpad_down){
-            maxSpeed = Range.clip(maxSpeed - 0.01, 0, 1);
+            isDownD = true;
+        }else{
+            if(isDownD){
+                isPressedD = true;
+            }
+            isDownD = false;
         }
+        if(isPressedD){
+            maxSpeed = Range.clip(maxSpeed - 0.01, 0, 1);
+            isPressedD = false;
+        }
+
         if(gamepad1.dpad_up){
+            isDownU = true;
+        }else{
+            if(isDownU){
+                isPressedU = true;
+            }
+            isDownU = false;
+        }
+        if(isPressedU){
             maxSpeed = Range.clip(maxSpeed + 0.01, 0, 1);
+            isPressedU = false;
+        }
+
+        //Change the acceleration of the motors so the robot does not jerk
+        if(gamepad1.left_stick_y != 0 || gamepad1.right_stick_y != 0){
+            acceleration += 0.01;
+        }else if(acceleration > 0){
+            acceleration -= 0.01;
         }
 
         // POV Mode uses left stick to go forward, and right stick to turn.
@@ -113,18 +146,18 @@ public class DriveCode_OpMode_Iterative extends OpMode
             double drive = -gamepad1.left_stick_y;
             double turn  =  gamepad1.right_stick_x;
 
-            leftPower = (Range.clip(drive + turn, -1.0, 1.0)) * maxSpeed;
-            rightPower = (Range.clip(drive - turn, -1.0, 1.0)) * maxSpeed;
+            leftPower = (Range.clip((drive + turn) * acceleration, -1.0, 1.0)) * maxSpeed;
+            rightPower = (Range.clip((drive - turn) * acceleration, -1.0, 1.0)) * maxSpeed;
         }else{ //ensures that there is always a value for left and right power
-            leftPower  = (-gamepad1.left_stick_y) * maxSpeed ;
-            rightPower = (-gamepad1.right_stick_y) * maxSpeed ;
+            leftPower  = (-gamepad1.left_stick_y) * acceleration * maxSpeed ;
+            rightPower = (-gamepad1.right_stick_y) * acceleration * maxSpeed ;
         }
 
         // Tank Mode uses one stick to control each wheel.
         // - This requires no math, but it is hard to drive forward slowly and keep straight.
         if(driveMode == 2) {
-            leftPower  = (-gamepad1.left_stick_y) * maxSpeed;
-            rightPower = (-gamepad1.right_stick_y) * maxSpeed;
+            leftPower  = Range.clip((-gamepad1.left_stick_y) * acceleration * maxSpeed, -1.0, 1.0);
+            rightPower = Range.clip((-gamepad1.right_stick_y) * acceleration * maxSpeed, -1.0, 1.0);
         }
 
         // Send calculated power to wheels
