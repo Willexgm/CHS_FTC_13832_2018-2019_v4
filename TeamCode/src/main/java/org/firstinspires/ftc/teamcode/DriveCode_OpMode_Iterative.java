@@ -44,21 +44,34 @@ import com.qualcomm.robotcore.util.Range;
  * class is instantiated on the Robot Controller and executed.
  */
 
-@TeleOp(name="Basic: Iterative OpMode", group="Iterative Opmode")
+@TeleOp(name="TeleOp DriveCode", group="Iterative Opmode")
 public class DriveCode_OpMode_Iterative extends OpMode
 {
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotor leftDrive = null;
     private DcMotor rightDrive = null;
+    private DcMotor intakeDrive = null;
+    private DcMotor armDrive = null;
 
     private int driveMode = 1; // 1 is POV, 2 is Tank
     private double maxSpeed = 1;// Increases and decreases the speed
+    private double maxSpeedArm = 0.5;
 
     private boolean isDownD = false;
     private boolean isPressedD = false;
     private boolean isDownU = false;
     private boolean isPressedU = false;
+
+    private boolean isDownA = false;
+    private boolean isPressedA = false;
+    private boolean isDownB = false;
+    private boolean isPressedB = false;
+    private boolean isDownY = false;
+    private boolean isPressedY = false;
+    private boolean intakeIsForward = false;
+    private boolean intakeIsBackward = false;
+
 
     double acceleration = 0;
 
@@ -71,11 +84,14 @@ public class DriveCode_OpMode_Iterative extends OpMode
         // step (using the FTC Robot Controller app on the phone).
         leftDrive  = hardwareMap.get(DcMotor.class, "left_drive");
         rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
+        intakeDrive = hardwareMap.get(DcMotor.class, "intake_drive");
+        armDrive = hardwareMap.get(DcMotor.class, "arm_drive");
 
         // Most robots need the motor on one side to be reversed to drive forward
         // Reverse the motor that runs backwards when connected directly to the battery
         leftDrive.setDirection(DcMotor.Direction.REVERSE);
         rightDrive.setDirection(DcMotor.Direction.FORWARD);
+        intakeDrive.setDirection(DcMotor.Direction.REVERSE);
 
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
@@ -95,6 +111,8 @@ public class DriveCode_OpMode_Iterative extends OpMode
         // Setup a variable for each drive wheel to save power level for telemetry
         double leftPower;
         double rightPower;
+        double armPower;
+        double intakePower;
 
         // Choose to drive using either Tank Mode, or POV Mode
         if(gamepad1.a){
@@ -119,7 +137,6 @@ public class DriveCode_OpMode_Iterative extends OpMode
             maxSpeed = Range.clip(maxSpeed - 0.01, 0, 1);
             isPressedD = false;
         }
-
         if(gamepad1.dpad_up){
             isDownU = true;
         }else{
@@ -131,6 +148,57 @@ public class DriveCode_OpMode_Iterative extends OpMode
         if(isPressedU){
             maxSpeed = Range.clip(maxSpeed + 0.01, 0, 1);
             isPressedU = false;
+        }
+
+        //Says if the a button was pressed
+        if(gamepad2.a){
+            isDownA = true;
+        }else{
+            if(isDownA){
+                isPressedA = true;
+            }
+            isDownA = false;
+        }
+        if(isPressedA){
+            intakeIsForward = false;
+            intakeIsBackward = true;
+            isPressedA = false;
+        }
+        //Says if the b button was pressed
+        if(gamepad2.b){
+            isDownB = true;
+        }else{
+            if(isDownB){
+                isPressedB = true;
+            }
+            isDownB = false;
+        }
+        if(isPressedB){
+            intakeIsForward = false;
+            intakeIsBackward = false;
+            isPressedB = false;
+        }
+        //Says if the c button was pressed
+        if(gamepad2.y){
+            isDownY = true;
+        }else{
+            if(isDownY){
+                isPressedY = true;
+            }
+            isDownY = false;
+        }
+        if(isPressedY){
+            intakeIsForward = true;
+            intakeIsBackward = false;
+            isPressedY = false;
+        }
+
+        if(intakeIsBackward){
+            intakePower = -1;
+        }else if(intakeIsForward){
+            intakePower = 1;
+        }else{
+            intakePower = 0;
         }
 
         //Change the acceleration of the motors so the robot does not jerk
@@ -160,13 +228,18 @@ public class DriveCode_OpMode_Iterative extends OpMode
             rightPower = Range.clip((-gamepad1.right_stick_y) * acceleration * maxSpeed, -1.0, 1.0);
         }
 
+        armPower = Range.clip((-gamepad2.right_stick_y) * maxSpeedArm, -1.0, 1.0);
+        //intakePower = Range.clip((-gamepad2.left_stick_y), -1.0, 1.0);
+
         // Send calculated power to wheels
         leftDrive.setPower(leftPower);
         rightDrive.setPower(rightPower);
+        intakeDrive.setPower(intakePower);
+        armDrive.setPower(armPower);
 
         // Show the elapsed game time and wheel power.
         telemetry.addData("Status", "Run Time: " + runtime.toString());
-        telemetry.addData("Motors", "left (%.2f), right (%.2f)", leftPower, rightPower);
+        telemetry.addData("Motors", "left (%.2f), right (%.2f), arm(%.2f), intake(%.2f)", leftPower, rightPower, armPower, intakePower);
     }
 
     @Override

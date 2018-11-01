@@ -27,15 +27,17 @@ public class Team13832Auto extends OpMode {
     Orientation angles;
 
     private final double THRESHOLD = 1;
-    static final double     COUNTS_PER_MOTOR_REV = 288;
+    static final double     COUNTS_PER_MOTOR_REV = 210;
     static final double     WHEEL_DIAMETER_INCHES = 3.54331;
     static final double     DRIVE_GEAR_REDUCTION = 2.0;
     static final double     COUNTS_PER_INCH = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) / (WHEEL_DIAMETER_INCHES * 3.1415);
 
-    private double leftPower;
-    private double rightPower;
+    private double leftPower = 0;
+    private double rightPower = 0;
     private double moveSpeed = 0.4;
-    private double turnSpeed = 0.3;
+    private double turnSpeed = 0.1;
+    private double slowRatio = 0.1;
+    private double slowSpeedMultiplyer = 0.2;
 
     @Override
     public void init() {
@@ -72,6 +74,9 @@ public class Team13832Auto extends OpMode {
 
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
+
+        rightDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        leftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
 
     @Override
@@ -83,12 +88,40 @@ public class Team13832Auto extends OpMode {
         runtime.reset();
         // Go through the path of the robot
         //move(12, moveSpeed);
-        turn(90);
+        //turn(45);
         //move(12, moveSpeed);
         //turn(90);
         //move(12, moveSpeed);
         //turn(90);
         //move(12, moveSpeed);
+        int target = 45;
+        while(true){
+            angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES); //update angle
+
+
+            if(target - angles.firstAngle > THRESHOLD){ // check to see if angle is less than target
+                leftPower = turnSpeed;
+                rightPower = -turnSpeed;
+            }else{ // If the robot is in an acceptable orientation break out of loop
+                leftDrive.setPower(0);
+                rightDrive.setPower(0);
+                break;
+            }
+
+            leftDrive.setPower(leftPower);
+            rightDrive.setPower(rightPower);
+
+            // Add telemety data
+            telemetry.addData("right encoder", rightDrive.getCurrentPosition());
+            telemetry.addData("left encoder", leftDrive.getCurrentPosition());
+
+            telemetry.addData("Angle", angles.firstAngle);
+            telemetry.addData("Status", "Run Time: " + runtime.toString());
+            telemetry.addData("Motors", "left (%.2f), right (%.2f)", leftPower, rightPower);
+            telemetry.update();
+        }
+        leftDrive.setPower(leftPower);
+        rightDrive.setPower(rightPower);
 
 
     }
@@ -106,11 +139,11 @@ public class Team13832Auto extends OpMode {
         double a = lastAngle + targetAngle;
 
         // Set motors to drive without an encoder
-        rightDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        leftDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rightDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        leftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         // Turn the robot while it is not within THRESHOLD of the given angle
-        while (true) {
+        while(true){
             angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES); //update angle
             leftDrive.setPower(leftPower);
             rightDrive.setPower(rightPower);
@@ -118,13 +151,18 @@ public class Team13832Auto extends OpMode {
             if(angles.firstAngle < a - THRESHOLD){ // check to see if angle is less than target
                 leftPower = -turnSpeed;
                 rightPower = turnSpeed;
-            }else if(angles.firstAngle >= a + THRESHOLD){ // Check to see if angle is greaeter than target
+            }else if(angles.firstAngle >= a + THRESHOLD){ // Check to see if angle is greater than target
                 leftPower = turnSpeed;
-                rightPower = turnSpeed;
-            }else{ // If the robot is in an accptable orintation break out of loop
+                rightPower = -turnSpeed;
+            }else{ // If the robot is in an acceptable orientation break out of loop
+                leftDrive.setPower(0);
+                rightDrive.setPower(0);
                 break;
             }
             // Add telemety data
+            telemetry.addData("right encoder", rightDrive.getCurrentPosition());
+            telemetry.addData("left encoder", leftDrive.getCurrentPosition());
+
             telemetry.addData("Angle", angles.firstAngle);
             telemetry.addData("Status", "Run Time: " + runtime.toString());
             telemetry.addData("Motors", "left (%.2f), right (%.2f)", leftPower, rightPower);
@@ -132,14 +170,13 @@ public class Team13832Auto extends OpMode {
         }
 
         // Stop motion
-        leftDrive.setPower(0);
-        rightDrive.setPower(0);
+
     }
 
     public void move(double distance, double speed){
         // Determine new target position, and pass to motor controller
-        int newLeftTarget = leftDrive.getCurrentPosition() + (int)(distance * COUNTS_PER_INCH);;
-        int newRightTarget = rightDrive.getCurrentPosition() + (int)(distance * COUNTS_PER_INCH);;
+        int newLeftTarget = leftDrive.getCurrentPosition() + (int)(distance * COUNTS_PER_INCH);
+        int newRightTarget = rightDrive.getCurrentPosition() + (int)(distance * COUNTS_PER_INCH);
 
         // Set Target and Turn On RUN_TO_POSITION
         leftDrive.setTargetPosition(newLeftTarget);
@@ -149,9 +186,15 @@ public class Team13832Auto extends OpMode {
 
         // move the robot to the target position
         while(leftDrive.isBusy() || rightDrive.isBusy()) {
-            speed = Range.clip(speed, -1.0, 1.0);
-            leftDrive.setPower(speed);
-            rightDrive.setPower(speed);
+            if (rightDrive.getCurrentPosition() <= newRightTarget * (1 - slowRatio) ) {
+                speed = Range.clip(speed, -1.0, 1.0);
+                leftDrive.setPower(speed);
+                rightDrive.setPower(speed);
+            } else {
+                speed = Range.clip(speed, -1.0, 1.0);
+                leftDrive.setPower(speed * slowSpeedMultiplyer);
+                rightDrive.setPower(speed * slowSpeedMultiplyer);
+            }
         }
 
         // Stop the robot when its done moving
