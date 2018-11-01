@@ -1,3 +1,7 @@
+## Import This Thing!
+First check the gitb settings.gradle file. If compile: endercv and compile: openCVLibrary3 lines exist delete them. Next pull the code. Then follow the instructions found here: https://github.com/guineawheek/endercv Once you're done update the gradle files with error to SDK Version 23 and implementation not compile
+Done!!!
+
 ## Welcome!
 This GitHub repository contains the source code that is used to build an Android app to control a *FIRST* Tech Challenge competition robot.  To use this SDK, download/clone the entire project to your local computer.
 
