@@ -53,10 +53,12 @@ public class DriveCode_OpMode_Iterative extends OpMode
     private DcMotor rightDrive = null;
     private DcMotor intakeDrive = null;
     private DcMotor armDrive = null;
+    private DcMotor liftDrive = null;
 
     private int driveMode = 1; // 1 is POV, 2 is Tank
-    private double maxSpeed = 1;// Increases and decreases the speed
+    private double maxSpeed = 1; // Increases and decreases the speed
     private double maxSpeedArm = 0.5;
+    private double maxSpeedLift = 1;
 
     private boolean isDownD = false;
     private boolean isPressedD = false;
@@ -86,6 +88,7 @@ public class DriveCode_OpMode_Iterative extends OpMode
         rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
         intakeDrive = hardwareMap.get(DcMotor.class, "intake_drive");
         armDrive = hardwareMap.get(DcMotor.class, "arm_drive");
+        liftDrive = hardwareMap.get(DcMotor.class, "lift_drive");
 
         // Most robots need the motor on one side to be reversed to drive forward
         // Reverse the motor that runs backwards when connected directly to the battery
@@ -113,6 +116,7 @@ public class DriveCode_OpMode_Iterative extends OpMode
         double rightPower;
         double armPower;
         double intakePower;
+        double liftPower;
 
         // Choose to drive using either Tank Mode, or POV Mode
         if(gamepad1.a){
@@ -230,12 +234,20 @@ public class DriveCode_OpMode_Iterative extends OpMode
 
         armPower = Range.clip((-gamepad2.right_stick_y) * maxSpeedArm, -1.0, 1.0);
         //intakePower = Range.clip((-gamepad2.left_stick_y), -1.0, 1.0);
+        if(gamepad2.right_trigger > 0) {
+            liftPower = gamepad2.right_trigger * maxSpeedLift;
+        }else if(gamepad2.left_trigger > 0) {
+            liftPower = gamepad2.left_trigger * maxSpeedLift * (-1);
+        }else{
+            liftPower = 0;
+        }
 
         // Send calculated power to wheels
         leftDrive.setPower(leftPower);
         rightDrive.setPower(rightPower);
         intakeDrive.setPower(intakePower);
         armDrive.setPower(armPower);
+        liftDrive.setPower(liftPower);
 
         // Show the elapsed game time and wheel power.
         telemetry.addData("Status", "Run Time: " + runtime.toString());

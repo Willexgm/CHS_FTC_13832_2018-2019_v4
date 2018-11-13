@@ -1,3 +1,4 @@
+package org.firstinspires.ftc.teamcode;
 /* Copyright (c) 2017 FIRST. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -27,15 +28,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.PwmControl;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.ServoControllerEx;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
+
 
 /**
  * This file contains an example of an iterative (Non-Linear) "OpMode".
@@ -43,71 +46,81 @@ import com.qualcomm.robotcore.util.Range;
  * The names of OpModes appear on the menu of the FTC Driver Station.
  * When an selection is made from the menu, the corresponding OpMode
  * class is instantiated on the Robot Controller and executed.
+ *
+ * This particular OpMode just executes a basic Tank Drive Teleop for a two wheeled robot
+ * It includes all the skeletal structure that all iterative OpModes contain.
+ *
+ * Use Android Studios to Copy this Class, and Paste it into your team's code folder with a new name.
+ * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="TestOneMotor", group="Iterative Opmode")
-public class TEST_ONE_MOTOR extends OpMode
-{
+@TeleOp(name="Sparkmini_Test", group= "Iterative Opmode")
+public class Sparkmini_Test extends OpMode{
     // Declare OpMode members.
-    /*
     private ElapsedTime runtime = new ElapsedTime();
-    */
-    private DcMotor drive = null;
-    private AnalogInput potent;
 
+    int servo_port_1; //the servo port number on the controller
+    Servo servo_motor_1;
+    ServoControllerEx servo_motor_control_1;
+    ServoControllerEx theControl_1;
+    PwmControl.PwmRange theRange_1;
+
+    private DcMotor leftDrive = null;
     @Override
     public void init() {
-        potent = hardwareMap.analogInput.get("potent");
 
-        /*
+        servo_motor_1 = hardwareMap.get(Servo.class, "servo_motor_1");
+        // Set the rotation servo for extended PWM range
+        if (servo_motor_1.getController() instanceof ServoControllerEx) {
+            // Confirm its an extended range servo controller before we try to set to avoid crash
+            theControl_1 = (ServoControllerEx) servo_motor_1.getController();
+            servo_port_1 = servo_motor_1.getPortNumber();
+            telemetry.addData("ServoPort#", servo_port_1);
+            telemetry.update();
+            theRange_1 = new PwmControl.PwmRange(500, 2500);
+            theControl_1.setServoPwmRange(servo_port_1, theRange_1);
+        }
+        theControl_1.setServoPwmEnable(servo_port_1);
 
-        telemetry.addData("Status", "Initialized");
-
-        drive = hardwareMap.get(DcMotor.class, "drive");
-
-
-        drive.setDirection(DcMotor.Direction.FORWARD);
-
-        // Tell the driver that initialization is complete.
-        telemetry.addData("Status", "Initialized");
-        */
-        drive = hardwareMap.get(DcMotor.class, "drive");
-        drive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        drive.setDirection(DcMotorSimple.Direction.REVERSE);
+        leftDrive  = hardwareMap.get(DcMotor.class, "left_drive");
 
         telemetry.addData("Status", "Initialized");
     }
+
 
     @Override
     public void init_loop() {
     }
 
+
     @Override
     public void start() {
-        //runtime.reset();
+        runtime.reset();
     }
 
     @Override
     public void loop() {
-        // Setup a variable for each drive wheel to save power level for telemetry
-        /*
-        double power = -gamepad1.left_stick_y;
-        drive.setPower(power);
-        */
-        //telemetry.addData("RightTrigger: ", gamepad1.right_trigger);
-        telemetry.addData("Potent: ", potent.getVoltage());
-        if(potent.getVoltage() < 1.5) {
-            drive.setPower(0.1);
-        }else{
-            drive.setPower(0);
-        }
-        telemetry.update();
-        // Show the elapsed game time and wheel power.
+        double leftPower;
 
+        leftPower = Range.clip(gamepad1.left_stick_y, -1.0, 1.0);
+
+        set_servo_motor_1(leftPower);
+        leftDrive.setPower(leftPower);
+
+        telemetry.addData("Status", "Run Time: " + runtime.toString());
+        telemetry.addData("Motors", "left (%.2f)", leftPower);
+        telemetry.addData("servo position", servo_port_1);
+        telemetry.update();
     }
 
     @Override
     public void stop() {
     }
 
+    public void set_servo_motor_1(double speed){
+        speed = Range.clip(speed, -1.0, 1.0) ;
+        theControl_1.setServoPosition(servo_port_1,(speed+1)/2);
+    }
 }
+
+

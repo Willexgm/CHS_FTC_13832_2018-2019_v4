@@ -4,7 +4,7 @@ import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
-import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -17,8 +17,9 @@ import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.Velocity;
 
-@Autonomous(name="13832 Auto", group="Iterative Opmode")
-public class Team13832Auto extends OpMode {
+@Autonomous(name="13832 Auto", group="Linear Opmode")
+public class Team13832AutoLinear extends LinearOpMode {
+
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotor leftDrive = null;
@@ -40,7 +41,8 @@ public class Team13832Auto extends OpMode {
     private double slowSpeedMultiplyer = 0.2;
 
     @Override
-    public void init() {
+    public void runOpMode() {
+        ////////////////////////////////////INIT////////////////////////////////////////
         telemetry.addData("Status", "Initializing...");
         telemetry.update();
 
@@ -73,71 +75,24 @@ public class Team13832Auto extends OpMode {
         leftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        // Tell the driver that initialization is complete.
-        telemetry.addData("Status", "Initialized");
-
         rightDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         leftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         telemetry.addData("Status", "Initialized");
         telemetry.update();
-    }
 
-    @Override
-    public void init_loop() {
-    }
-
-    @Override
-    public void start() {
-        runtime.reset();
-        // Go through the path of the robot
+        ///////////////////////////////PATH////////////////////////////////
         move(12, moveSpeed);
-        //turn(45);
-        //move(12, moveSpeed);
-        //turn(90);
-        //move(12, moveSpeed);
-        //turn(90);
-        //move(12, moveSpeed);
-        /*
-        int target = 45;
-        while(true){
-            angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES); //update angle
-
-
-            if(target - angles.firstAngle > THRESHOLD){ // check to see if angle is less than target
-                leftPower = turnSpeed;
-                rightPower = -turnSpeed;
-            }else{ // If the robot is in an acceptable orientation break out of loop
-                leftDrive.setPower(0);
-                rightDrive.setPower(0);
-                break;
-            }
-
-            leftDrive.setPower(leftPower);
-            rightDrive.setPower(rightPower);
-
-            // Add telemety data
-            telemetry.addData("right encoder", rightDrive.getCurrentPosition());
-            telemetry.addData("left encoder", leftDrive.getCurrentPosition());
-
-            telemetry.addData("Angle", angles.firstAngle);
-            telemetry.addData("Status", "Run Time: " + runtime.toString());
-            telemetry.addData("Motors", "left (%.2f), right (%.2f)", leftPower, rightPower);
-            telemetry.update();
-        }
-        leftDrive.setPower(leftPower);
-        rightDrive.setPower(rightPower);
-
-    */
+        turn(90);
+        move(12, moveSpeed);
+        turn(90);
+        move(12, moveSpeed);
+        turn(90);
+        move(12, moveSpeed);
+        turn(90);
     }
 
-    @Override
-    public void loop() {}
-
-    @Override
-    public void stop() {}
-
-    // Method that when given an angle turns the robot to the correct position
+    ///////////////////////////////TURN/////////////////////////////////
     public void turn(double targetAngle) {
         // Take into account the robots current angular orientation
         double lastAngle = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle;
@@ -178,6 +133,7 @@ public class Team13832Auto extends OpMode {
 
     }
 
+    /////////////////////////////MOVE/////////////////////////////////////
     public void move(double distance, double speed){
         // Determine new target position, and pass to motor controller
         int newLeftTarget = leftDrive.getCurrentPosition() + (int)(distance * COUNTS_PER_INCH);
